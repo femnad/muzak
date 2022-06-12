@@ -69,6 +69,7 @@
   handlers:
     - name: reboot-system
       reboot:
+      become: true
 
   tasks:
     - replace:
@@ -77,6 +78,8 @@
         replace: Storage=persistent
       become: true
       notify: reboot-system
+
+    - meta: flush_handlers
 
     - file:
         path: '{{ home_bin }}'
@@ -147,6 +150,17 @@
         remote_src: yes
       become: yes
 
+    - file:
+        path: '{{ caddyfile | dirname }}'
+        state: directory
+      become: true
+
+    - template:
+        src: Caddyfile
+        dest: '{{ caddyfile }}'
+      become: true
+      name: z
+
     - template:
         src: service.j2
         dest: /etc/systemd/system/caddy.service
@@ -161,15 +175,4 @@
         daemon_reload: yes
         enabled: yes
       become: yes
-
-    - file:
-        path: '{{ caddyfile | dirname }}'
-        state: directory
-      become: true
-
-    - template:
-        src: Caddyfile
-        dest: '{{ caddyfile }}'
-      become: true
-      name: z
 ...
