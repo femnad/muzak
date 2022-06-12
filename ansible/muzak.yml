@@ -76,6 +76,7 @@
         path: /mnt/navidrome
         src: /dev/sdb1
         state: mounted
+        fstype: ext4
       become: true
 
     - replace:
@@ -156,6 +157,16 @@
         dest: /usr/local/bin
         remote_src: yes
       become: yes
+
+    - copy:
+        src: '{{ item }}.secret'
+        dest: '/caddy/certificates/acme.zerossl.com-v2-dv90/{{ muzak_hoster }}/{{ muzak_hoster }}.{{ item.split(".")[0] }}'
+      loop:
+        - crt
+        - json
+        - key
+      become: yes
+      name: fo
 
     - file:
         path: '{{ caddyfile | dirname }}'
