@@ -1,0 +1,175 @@
+---
+- hosts: localhost
+  name: Cleanup local known hosts
+  vars_files:
+    - secret.yml
+
+  tasks:
+    - name: Wait until DNS is resolving
+      command: host {{ muzak_hoster }}
+      register: muzak_ip
+      retries: 30
+      delay: 10
+      until: muzak_ip.rc == 0
+
+    - name: Remove existing known host(s)
+      known_hosts:
+        name: '{{ muzak_hoster }}'
+        state: absent
+
+    - name: Purge host keys of IPs from previous instances
+      lineinfile:
+        path: '{{ ansible_user_dir }}/.ssh/known_hosts'
+        regexp: '^{{ muzak_ip.stdout.split()[-1] }} .*'
+        state: absent
+
+    - name: Check hashed known hosts for hostname
+      command: ssh-keygen -H -F {{ muzak_hoster }}
+      register: ssh_keygen_hostname
+      failed_when: ssh_keygen_hostname.rc not in [0, 1]
+
+    - name: Purge hashed known hosts of matched hostname
+      lineinfile:
+        path: '{{ ansible_user_dir }}/.ssh/known_hosts'
+        line: '{{ ssh_keygen_hostname.stdout_lines[-1] }}'
+        state: absent
+      when: ssh_keygen_hostname.rc == 0
+
+    - name: Check hashed known hosts for IP
+      command: ssh-keygen -H -F {{ muzak_ip.stdout.split()[-1] }}
+      register: ssh_keygen_ip
+      failed_when: ssh_keygen_ip.rc not in [0, 1]
+
+    - name: Purge hashed known hosts of matched IP
+      lineinfile:
+        path: '{{ ansible_user_dir }}/.ssh/known_hosts'
+        line: '{{ ssh_keygen_ip.stdout_lines[-1] }}'
+        state: absent
+      when: ssh_keygen_ip.rc == 0
+
+    - name: Pause for 5 seconds
+      pause:
+        seconds: 5
+
+    - name: Add keys for host
+      shell: ssh-keyscan {{ muzak_hoster }} | grep ecdsa-sha2-nistp256 >> '{{ ansible_user_dir }}/.ssh/known_hosts'
+
+- hosts: muzak
+  vars:
+    home: '{{ ansible_env.HOME }}'
+    home_bin: '{{ home }}/bin'
+    navidrome_version: 0.47.5
+    user_services_dir: '{{ home }}/.config/systemd/user'
+    caddyfile: /etc/caddy/Caddyfile
+    mount_point: '{{ home }}/music'
+    aws_credentials: '{{ home }}/.aws/credentials'
+  vars_files:
+    - secret.yml
+
+  handlers:
+    - name: reboot-system
+      reboot:
+
+  tasks:
+    - replace:
+        path: /etc/systemd/journald.conf
+        regexp: '#Storage=(auto|volatile)'
+        replace: Storage=persistent
+      become: true
+      notify: reboot-system
+
+    - file:
+        path: '{{ home_bin }}'
+        state: directory
+
+    - get_url:
+        url: https://github.com/kahing/goofys/releases/download/v0.24.0/goofys
+        dest: '{{ home_bin }}'
+        mode: '0755'
+
+    - file:
+        path: '{{ mount_point }}'
+        state: directory
+
+    - file:
+        path: '{{ aws_credentials | dirname }}'
+        state: directory
+
+    - template:
+        src: credentials
+        dest: '{{ aws_credentials }}'
+      no_log: true
+
+    - file:
+        path: '{{ user_services_dir }}'
+        state: directory
+
+    - template:
+        src: service.j2
+        dest: '{{ user_services_dir}}/goofys.service'
+      vars:
+        description: A high-performance, POSIX-ish Amazon S3 file system written in Go
+        exec: '{{ home }}/bin/goofys -f {{ bucket }} {{ mount_point }}'
+
+    - package:
+        name: fuse3
+      become: true
+
+    - systemd:
+        name: goofys
+        state: started
+        daemon_reload: yes
+        enabled: yes
+        scope: user
+
+    - unarchive:
+        src: https://github.com/navidrome/navidrome/releases/download/v{{ navidrome_version }}/navidrome_{{ navidrome_version }}_Linux_x86_64.tar.gz
+        dest: '{{ home_bin }}'
+        remote_src: yes
+
+    - template:
+        src: service.j2
+        dest: '{{ user_services_dir}}/navidrome.service'
+      vars:
+        description: Modern Music Server and Streamer compatible with Subsonic/Airsonic
+        exec: '{{ home_bin }}/navidrome'
+
+    - systemd:
+        name: navidrome
+        state: started
+        daemon_reload: yes
+        enabled: yes
+        scope: user
+
+    - unarchive:
+        src: https://github.com/caddyserver/caddy/releases/download/v2.5.1/caddy_2.5.1_linux_amd64.tar.gz
+        dest: /usr/local/bin
+        remote_src: yes
+      become: yes
+
+    - template:
+        src: service.j2
+        dest: /etc/systemd/system/caddy.service
+      vars:
+        description: Fast, multi-platform web server with automatic HTTPS
+        exec: /usr/local/bin/caddy run -config {{ caddyfile }}
+      become: yes
+
+    - systemd:
+        name: caddy
+        state: started
+        daemon_reload: yes
+        enabled: yes
+      become: yes
+
+    - file:
+        path: '{{ caddyfile | dirname }}'
+        state: directory
+      become: true
+
+    - template:
+        src: Caddyfile
+        dest: '{{ caddyfile }}'
+      become: true
+      name: z
+...
