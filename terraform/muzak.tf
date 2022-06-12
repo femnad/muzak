@@ -4,7 +4,7 @@ terraform {
 
 module "instance-module" {
   source      = "femnad/instance-module/gcp"
-  version     = "0.8.0"
+  version     = "0.9.0"
   github_user = "femnad"
   project     = "foolproj"
   ssh_user    = var.ssh_user
@@ -30,4 +30,9 @@ module "firewall-module" {
   world_reachable = {
     "80" = "tcp"
   }
+}
+
+resource "google_compute_attached_disk" "default" {
+  disk     = "muzak-volume"
+  instance = module.instance-module.id
 }

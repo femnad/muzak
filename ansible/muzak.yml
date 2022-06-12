@@ -72,6 +72,12 @@
       become: true
 
   tasks:
+    - mount:
+        path: /mnt/navidrome
+        src: /dev/sdb1
+        state: mounted
+      become: true
+
     - replace:
         path: /etc/systemd/journald.conf
         regexp: '#Storage=(auto|volatile)'
@@ -80,6 +86,11 @@
       notify: reboot-system
 
     - meta: flush_handlers
+
+    - package:
+        name:
+          - fuse
+      become: true
 
     - file:
         path: '{{ home_bin }}'
@@ -112,11 +123,7 @@
         dest: '{{ user_services_dir}}/goofys.service'
       vars:
         description: A high-performance, POSIX-ish Amazon S3 file system written in Go
-        exec: '{{ home }}/bin/goofys -f {{ bucket }} {{ mount_point }}'
-
-    - package:
-        name: fuse3
-      become: true
+        exec: '{{ home }}/bin/goofys -f --region {{ region }} {{ bucket }} {{ mount_point }}'
 
     - systemd:
         name: goofys
@@ -135,7 +142,7 @@
         dest: '{{ user_services_dir}}/navidrome.service'
       vars:
         description: Modern Music Server and Streamer compatible with Subsonic/Airsonic
-        exec: '{{ home_bin }}/navidrome'
+        exec: '{{ home_bin }}/navidrome --datafolder /mnt/navidrome'
 
     - systemd:
         name: navidrome
@@ -159,7 +166,6 @@
         src: Caddyfile
         dest: '{{ caddyfile }}'
       become: true
-      name: z
 
     - template:
         src: service.j2
