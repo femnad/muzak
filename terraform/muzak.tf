@@ -8,6 +8,7 @@ module "instance-module" {
   github_user = "femnad"
   project     = "foolproj"
   ssh_user    = var.ssh_user
+  image       = "ubuntu-os-cloud/ubuntu-2204-lts"
 }
 
 module "dns-module" {
