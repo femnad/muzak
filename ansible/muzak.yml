@@ -63,6 +63,9 @@
     caddyfile: /etc/caddy/Caddyfile
     mount_point: '{{ home }}/music'
     aws_credentials: '{{ home }}/.aws/credentials'
+    cert_dir: '/caddy/certificates/acme.zerossl.com-v2-dv90/{{ muzak_hoster }}'
+    debug: false
+    pyinfra_venv: '{{ home }}/.local/share/venv/pyinfra'
   vars_files:
     - secret.yml
 
@@ -77,6 +80,13 @@
         src: /dev/sdb1
         state: mounted
         fstype: ext4
+      become: true
+
+    - file:
+        path: /mnt/navidrome
+        user: '{{ ansible_user_uid }}'
+        group: '{{ ansible_user_gid }}'
+        recurse: true
       become: true
 
     - replace:
@@ -158,15 +168,19 @@
         remote_src: yes
       become: yes
 
+    - file:
+        path: '{{ cert_dir }}'
+        state: directory
+      become: yes
+
     - copy:
         src: '{{ item }}.secret'
-        dest: '/caddy/certificates/acme.zerossl.com-v2-dv90/{{ muzak_hoster }}/{{ muzak_hoster }}.{{ item.split(".")[0] }}'
+        dest: '{{ cert_dir }}/{{ muzak_hoster }}.{{ item.split(".")[0] }}'
       loop:
         - crt
         - json
         - key
       become: yes
-      name: fo
 
     - file:
         path: '{{ caddyfile | dirname }}'
@@ -184,6 +198,8 @@
       vars:
         description: Fast, multi-platform web server with automatic HTTPS
         exec: /usr/local/bin/caddy run -config {{ caddyfile }}
+        environment:
+          - Environment: HOME=/caddy
       become: yes
 
     - systemd:
@@ -192,4 +208,38 @@
         daemon_reload: yes
         enabled: yes
       become: yes
+
+    - git:
+        repo: https://gitlab.com/femnad/chezmoi
+        dest: '{{ home }}/.local/share/chezmoi'
+      when: debug
+
+    - command:
+        cmd: '{{ home_bin }}/chezmoi apply'
+
+    - apt:
+        name: virtualenv
+        update_cache: true
+      become: yes
+      when: debug
+
+    - pip:
+        name:
+          - pyinfra
+          - pyyaml
+        virtualenv: '{{ pyinfra_venv }}'
+      when: debug
+
+    - git:
+        repo: https://github.com/femnad/fup
+        dest: '{{ home }}/fup'
+      when: debug
+
+    - command:
+        cmd: '{{ pyinfra_venv }}/bin/pyinfra @local main.py'
+      args:
+        chdir: '{{ home }}/fup'
+      environment:
+        FUP_CONFIG_FILE: https://gitlab.com/femnad/chezmoi/-/raw/main/dot_config/fup/fup-server.yml
+      when: debug
 ...
