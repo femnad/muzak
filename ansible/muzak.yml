@@ -217,7 +217,8 @@
       when: debug
 
     - command:
-        cmd: '{{ home_bin }}/chezmoi apply'
+        cmd: '{{ home_bin }}/chezmoi apply --force'
+      when: debug
 
     - apt:
         name: virtualenv
