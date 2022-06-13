@@ -1,24 +1,24 @@
 [Unit]
 Description={{ description }}
-{%- if before is defined %}
+{% if before is defined %}
 Before={{ before }}.target
-{%- endif %}
+{% endif %}
 
 [Service]
 ExecStart={{ exec }}
-{%- if type is defined %}
+{% if type is defined %}
 Type={{ type }}
-{%- endif %}
-{%- for env_pair in environment %}
-{%- for k, v in env_pair.items() %}
+{% endif %}
+{% for env_pair in env | default([]) %}
+{% for k, v in env_pair.items() %}
 Environment={{ k }}={{ v }}
-{%- endfor %}
-{%- endfor %}
-{%- if service_options is defined %}
-{%- for k, v in service_options.items() %}
+{% endfor %}
+{% endfor %}
+{% if service_options is defined %}
+{% for k, v in service_options.items() %}
 {{ k }}={{ v }}
-{%- endfor %}
-{%- endif %}
+{% endfor %}
+{% endif %}
 
 [Install]
 WantedBy={{ wanted_by | default('default') }}.target

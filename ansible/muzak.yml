@@ -55,6 +55,7 @@
       shell: ssh-keyscan {{ muzak_hoster }} | grep ecdsa-sha2-nistp256 >> '{{ ansible_user_dir }}/.ssh/known_hosts'
 
 - hosts: muzak
+
   vars:
     home: '{{ ansible_env.HOME }}'
     home_bin: '{{ home }}/bin'
@@ -66,6 +67,7 @@
     cert_dir: '/caddy/certificates/acme.zerossl.com-v2-dv90/{{ muzak_hoster }}'
     debug: false
     pyinfra_venv: '{{ home }}/.local/share/venv/pyinfra'
+
   vars_files:
     - secret.yml
 
@@ -84,8 +86,8 @@
 
     - file:
         path: /mnt/navidrome
-        user: '{{ ansible_user_uid }}'
-        group: '{{ ansible_user_gid }}'
+        owner: '{{ ansible_user_id }}'
+        group: '{{ ansible_user_id }}'
         recurse: true
       become: true
 
@@ -198,8 +200,8 @@
       vars:
         description: Fast, multi-platform web server with automatic HTTPS
         exec: /usr/local/bin/caddy run -config {{ caddyfile }}
-        environment:
-          - Environment: HOME=/caddy
+        env:
+          - HOME: /caddy
       become: yes
 
     - systemd:
