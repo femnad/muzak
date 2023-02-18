@@ -4,7 +4,7 @@ terraform {
 
 module "instance-module" {
   source      = "femnad/instance-module/gcp"
-  version     = "0.9.0"
+  version     = "0.11.0"
   github_user = "femnad"
   project     = "foolproj"
   ssh_user    = var.ssh_user
@@ -21,19 +21,21 @@ module "dns-module" {
 }
 
 module "firewall-module" {
-  version = "0.2.5"
+  version = "0.4.0"
   source  = "femnad/firewall-module/gcp"
   project = var.project
   network = module.instance-module.network_name
   self_reachable = {
     "443" = "tcp"
+    "22" = "tcp"
   }
   world_reachable = {
-    "80" = "tcp"
   }
+  ip_mask = var.managed_connection ? 29 : 32
+  ip_num  = var.managed_connection ? 7 : 1
 }
 
-resource "google_compute_attached_disk" "default" {
-  disk     = "muzak-volume"
-  instance = module.instance-module.id
-}
+#resource "google_compute_attached_disk" "default" {
+#  disk     = "muzak-volume"
+#  instance = module.instance-module.id
+#}

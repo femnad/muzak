@@ -59,9 +59,11 @@
   vars:
     home: '{{ ansible_env.HOME }}'
     home_bin: '{{ home }}/bin'
-    navidrome_version: 0.47.5
-    user_services_dir: '{{ home }}/.config/systemd/user'
+    caddy_version: 2.6.4
     caddyfile: /etc/caddy/Caddyfile
+    data_folder: '{{ home }}/navidrome'
+    navidrome_version: 0.49.3
+    user_services_dir: '{{ home }}/.config/systemd/user'
     mount_point: '{{ home }}/music'
     aws_credentials: '{{ home }}/.aws/credentials'
     cert_dir: '/caddy/certificates/acme.zerossl.com-v2-dv90/{{ muzak_hoster }}'
@@ -74,21 +76,6 @@
   handlers:
     - name: reboot-system
       reboot:
-      become: true
-
-  tasks:
-    - mount:
-        path: /mnt/navidrome
-        src: /dev/sdb1
-        state: mounted
-        fstype: ext4
-      become: true
-
-    - file:
-        path: /mnt/navidrome
-        owner: '{{ ansible_user_id }}'
-        group: '{{ ansible_user_id }}'
-        recurse: true
       become: true
 
     - replace:
@@ -122,16 +109,19 @@
         path: '{{ aws_credentials | dirname }}'
         state: directory
 
-    - template:
+    - name: Write AWS credentials
+      template:
         src: credentials
         dest: '{{ aws_credentials }}'
       no_log: true
 
-    - file:
+    - name: Create user services dir
+      file:
         path: '{{ user_services_dir }}'
         state: directory
 
-    - template:
+    - name: Template goofys service
+      template:
         src: service.j2
         dest: '{{ user_services_dir}}/goofys.service'
       vars:
@@ -149,13 +139,14 @@
         src: https://github.com/navidrome/navidrome/releases/download/v{{ navidrome_version }}/navidrome_{{ navidrome_version }}_Linux_x86_64.tar.gz
         dest: '{{ home_bin }}'
         remote_src: yes
+        include: caddy
 
     - template:
         src: service.j2
         dest: '{{ user_services_dir}}/navidrome.service'
       vars:
         description: Modern Music Server and Streamer compatible with Subsonic/Airsonic
-        exec: '{{ home_bin }}/navidrome --datafolder /mnt/navidrome'
+        exec: '{{ home_bin }}/navidrome --datafolder {{ data_folder }}'
 
     - systemd:
         name: navidrome
@@ -165,7 +156,7 @@
         scope: user
 
     - unarchive:
-        src: https://github.com/caddyserver/caddy/releases/download/v2.5.1/caddy_2.5.1_linux_amd64.tar.gz
+        src: https://github.com/caddyserver/caddy/releases/download/v{{ caddy_version }}/caddy_{{ caddy_version }}_linux_amd64.tar.gz
         dest: /usr/local/bin
         remote_src: yes
       become: yes
@@ -175,7 +166,8 @@
         state: directory
       become: yes
 
-    - copy:
+    - name: Copy certificate secrets
+      copy:
         src: '{{ item }}.secret'
         dest: '{{ cert_dir }}/{{ muzak_hoster }}.{{ item.split(".")[0] }}'
       loop:
@@ -184,7 +176,8 @@
         - key
       become: yes
 
-    - file:
+    - name: Write caddyfile
+      file:
         path: '{{ caddyfile | dirname }}'
         state: directory
       become: true
@@ -194,17 +187,19 @@
         dest: '{{ caddyfile }}'
       become: true
 
-    - template:
+    - name: Template caddy service
+      template:
         src: service.j2
         dest: /etc/systemd/system/caddy.service
       vars:
         description: Fast, multi-platform web server with automatic HTTPS
-        exec: /usr/local/bin/caddy run -config {{ caddyfile }}
+        exec: /usr/local/bin/caddy run --config {{ caddyfile }}
         env:
           - HOME: /caddy
       become: yes
 
-    - systemd:
+    - name: Start caddy service
+      systemd:
         name: caddy
         state: started
         daemon_reload: yes
