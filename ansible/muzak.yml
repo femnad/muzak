@@ -78,6 +78,7 @@
       reboot:
       become: true
 
+  tasks:
     - replace:
         path: /etc/systemd/journald.conf
         regexp: '#Storage=(auto|volatile)'
