@@ -110,6 +110,23 @@
         path: '{{ aws_credentials | dirname }}'
         state: directory
 
+    # Allows having the same users across different instances.
+    - name: Mount attached disk
+      mount:
+        path: /mnt/navidrome
+        src: /dev/sdb1
+        state: mounted
+        fstype: ext4
+      become: true
+
+    - name: Ensure navidrome storage has correct ownership
+      file:
+        path: /mnt/navidrome
+        owner: '{{ ansible_user_id }}'
+        group: '{{ ansible_user_id }}'
+        recurse: true
+      become: true
+
     - name: Write AWS credentials
       template:
         src: credentials
@@ -140,7 +157,7 @@
         src: https://github.com/navidrome/navidrome/releases/download/v{{ navidrome_version }}/navidrome_{{ navidrome_version }}_Linux_x86_64.tar.gz
         dest: '{{ home_bin }}'
         remote_src: yes
-        include: caddy
+        include: navidrome
 
     - template:
         src: service.j2
@@ -160,6 +177,7 @@
         src: https://github.com/caddyserver/caddy/releases/download/v{{ caddy_version }}/caddy_{{ caddy_version }}_linux_amd64.tar.gz
         dest: /usr/local/bin
         remote_src: yes
+        include: caddy
       become: yes
 
     - file:
@@ -206,39 +224,4 @@
         daemon_reload: yes
         enabled: yes
       become: yes
-
-    - git:
-        repo: https://gitlab.com/femnad/chezmoi
-        dest: '{{ home }}/.local/share/chezmoi'
-      when: debug
-
-    - command:
-        cmd: '{{ home_bin }}/chezmoi apply --force'
-      when: debug
-
-    - apt:
-        name: virtualenv
-        update_cache: true
-      become: yes
-      when: debug
-
-    - pip:
-        name:
-          - pyinfra
-          - pyyaml
-        virtualenv: '{{ pyinfra_venv }}'
-      when: debug
-
-    - git:
-        repo: https://github.com/femnad/fup
-        dest: '{{ home }}/fup'
-      when: debug
-
-    - command:
-        cmd: '{{ pyinfra_venv }}/bin/pyinfra @local main.py'
-      args:
-        chdir: '{{ home }}/fup'
-      environment:
-        FUP_CONFIG_FILE: https://gitlab.com/femnad/chezmoi/-/raw/main/dot_config/fup/fup-server.yml
-      when: debug
 ...

@@ -38,3 +38,8 @@ module "firewall-module" {
     google = google
   }
 }
+
+resource "google_compute_attached_disk" "navidrome_storage_attachement" {
+  disk     = var.volume_name
+  instance = module.instance-module.id
+}
