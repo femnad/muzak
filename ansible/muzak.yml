@@ -61,7 +61,7 @@
     home_bin: '{{ home }}/bin'
     caddy_version: 2.6.4
     caddyfile: /etc/caddy/Caddyfile
-    data_folder: '{{ home }}/navidrome'
+    data_folder: /mnt/navidrome
     navidrome_version: 0.49.3
     user_services_dir: '{{ home }}/.config/systemd/user'
     mount_point: '{{ home }}/music'
@@ -77,7 +77,8 @@
       become: true
 
   tasks:
-    - replace:
+    - name: Enable persistent logs for user services
+      ansible.builtin.replace:
         path: /etc/systemd/journald.conf
         regexp: '#Storage=(auto|volatile)'
         replace: Storage=persistent
@@ -85,19 +86,22 @@
       notify: reboot-system
 
     - name: Update packages
-      apt:
+      ansible.builtin.apt:
+        name: '*'
         state: latest
         update_cache: true
       become: true
 
     - meta: flush_handlers
 
-    - package:
+    - name: Install fuse
+      ansible.builtin.package:
         name:
           - fuse
       become: true
 
-    - file:
+    - name: Ensure home binary folder
+      ansible.builtin.file:
         path: '{{ home_bin }}'
         state: directory
 
@@ -106,13 +110,14 @@
         deb: https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v{{ gcsfuse_version }}/gcsfuse_{{ gcsfuse_version }}_amd64.deb
       become: true
 
-    - file:
+    - name: Ensure Navidrome mount point
+      ansible.builtin.file:
         path: '{{ mount_point }}'
         state: directory
 
     # Allows having the same users across different instances.
     - name: Mount attached disk
-      mount:
+      ansible.builtin.mount:
         path: /mnt/navidrome
         src: /dev/sdb1
         state: mounted
@@ -120,7 +125,7 @@
       become: true
 
     - name: Ensure navidrome storage has correct ownership
-      file:
+      ansible.builtin.file:
         path: /mnt/navidrome
         owner: '{{ ansible_user_id }}'
         group: '{{ ansible_user_id }}'
@@ -128,53 +133,59 @@
       become: true
 
     - name: Create user services dir
-      file:
+      ansible.builtin.file:
         path: '{{ user_services_dir }}'
         state: directory
 
     - name: Template gcsfuse service
-      template:
+      ansible.builtin.template:
         src: service.j2
         dest: '{{ user_services_dir}}/gcsfuse.service'
       vars:
         description: A user-space file system for interacting with Google Cloud Storage
         exec: '/usr/bin/gcsfuse --foreground --implicit-dirs {{ bucket }} {{ mount_point }}'
 
-    - systemd:
+    - name: Start gcsfuse service
+      ansible.builtin.systemd:
         name: gcsfuse
         state: started
         daemon_reload: yes
         enabled: yes
         scope: user
 
-    - unarchive:
+    - name: Download Navidrome
+      ansible.builtin.unarchive:
         src: https://github.com/navidrome/navidrome/releases/download/v{{ navidrome_version }}/navidrome_{{ navidrome_version }}_Linux_x86_64.tar.gz
         dest: '{{ home_bin }}'
         remote_src: yes
         include: navidrome
 
-    - template:
+    - name: Template Navidrome service
+      ansible.builtin.template:
         src: service.j2
         dest: '{{ user_services_dir}}/navidrome.service'
       vars:
         description: Modern Music Server and Streamer compatible with Subsonic/Airsonic
         exec: '{{ home_bin }}/navidrome --datafolder {{ data_folder }}'
 
-    - systemd:
+    - name: Start Navidrome service
+      ansible.builtin.systemd:
         name: navidrome
         state: started
         daemon_reload: yes
         enabled: yes
         scope: user
 
-    - unarchive:
+    - name: Download Caddy
+      ansible.builtin.unarchive:
         src: https://github.com/caddyserver/caddy/releases/download/v{{ caddy_version }}/caddy_{{ caddy_version }}_linux_amd64.tar.gz
         dest: /usr/local/bin
         remote_src: yes
         include: caddy
       become: yes
 
-    - file:
+    - name: Create certificate dir
+      ansible.builtin.file:
         path: '{{ cert_dir }}'
         state: directory
       become: yes
@@ -189,18 +200,19 @@
         - key
       become: yes
 
-    - name: Write caddyfile
+    - name: Ensure Caddyfile dir
       file:
         path: '{{ caddyfile | dirname }}'
         state: directory
       become: true
 
-    - template:
+    - name: Write Caddyfile
+      template:
         src: Caddyfile
         dest: '{{ caddyfile }}'
       become: true
 
-    - name: Template caddy service
+    - name: Template Caddy service
       template:
         src: service.j2
         dest: /etc/systemd/system/caddy.service
@@ -211,7 +223,7 @@
           - HOME: /caddy
       become: yes
 
-    - name: Start caddy service
+    - name: Start Caddy service
       systemd:
         name: caddy
         state: started
