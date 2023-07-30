@@ -9,11 +9,11 @@ provider "google" {
 }
 
 module "instance-module" {
-  source      = "femnad/instance-module/gcp"
-  version     = "0.14.1"
-  github_user = "femnad"
-  ssh_user    = var.ssh_user
-  image       = "ubuntu-os-cloud/ubuntu-2204-lts"
+  source          = "femnad/instance-module/gcp"
+  version         = "0.18.1"
+  github_user     = "femnad"
+  image           = "ubuntu-os-cloud/ubuntu-2204-lts"
+  service_account = var.service_account
 }
 
 module "dns-module" {

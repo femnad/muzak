@@ -17,3 +17,5 @@ variable "volume_name" {}
 variable "zone" {
   default = "europe-west2-b"
 }
+
+variable "service_account" {}
