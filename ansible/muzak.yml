@@ -65,10 +65,8 @@
     navidrome_version: 0.49.3
     user_services_dir: '{{ home }}/.config/systemd/user'
     mount_point: '{{ home }}/music'
-    aws_credentials: '{{ home }}/.aws/credentials'
     cert_dir: '/caddy/certificates/acme.zerossl.com-v2-dv90/{{ muzak_hoster }}'
-    debug: false
-    pyinfra_venv: '{{ home }}/.local/share/venv/pyinfra'
+    gcsfuse_version: 1.0.1
 
   vars_files:
     - secret.yml
@@ -103,17 +101,13 @@
         path: '{{ home_bin }}'
         state: directory
 
-    - get_url:
-        url: https://github.com/kahing/goofys/releases/download/v0.24.0/goofys
-        dest: '{{ home_bin }}'
-        mode: '0755'
+    - name: Install gcsfuse
+      ansible.builtin.apt:
+        deb: https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v{{ gcsfuse_version }}/gcsfuse_{{ gcsfuse_version }}_amd64.deb
+      become: true
 
     - file:
         path: '{{ mount_point }}'
-        state: directory
-
-    - file:
-        path: '{{ aws_credentials | dirname }}'
         state: directory
 
     # Allows having the same users across different instances.
@@ -133,27 +127,21 @@
         recurse: true
       become: true
 
-    - name: Write AWS credentials
-      template:
-        src: credentials
-        dest: '{{ aws_credentials }}'
-      no_log: true
-
     - name: Create user services dir
       file:
         path: '{{ user_services_dir }}'
         state: directory
 
-    - name: Template goofys service
+    - name: Template gcsfuse service
       template:
         src: service.j2
-        dest: '{{ user_services_dir}}/goofys.service'
+        dest: '{{ user_services_dir}}/gcsfuse.service'
       vars:
-        description: A high-performance, POSIX-ish Amazon S3 file system written in Go
-        exec: '{{ home }}/bin/goofys -f --region {{ region }} {{ bucket }} {{ mount_point }}'
+        description: A user-space file system for interacting with Google Cloud Storage
+        exec: '/usr/bin/gcsfuse --foreground --implicit-dirs {{ bucket }} {{ mount_point }}'
 
     - systemd:
-        name: goofys
+        name: gcsfuse
         state: started
         daemon_reload: yes
         enabled: yes
