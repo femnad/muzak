@@ -14,6 +14,9 @@ module "instance-module" {
   github_user     = "femnad"
   image           = "ubuntu-os-cloud/ubuntu-2204-lts"
   service_account = var.service_account
+  providers = {
+    google = google
+  }
 }
 
 module "dns-module" {
@@ -22,6 +25,9 @@ module "dns-module" {
   dns_name         = var.dns_name
   instance_ip_addr = module.instance-module.instance_ip_addr
   managed_zone     = var.managed_zone
+  providers = {
+    google = google
+  }
 }
 
 module "firewall-module" {
@@ -42,4 +48,5 @@ module "firewall-module" {
 resource "google_compute_attached_disk" "navidrome_storage_attachement" {
   disk     = var.volume_name
   instance = module.instance-module.id
+  provider = google
 }
