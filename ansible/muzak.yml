@@ -149,15 +149,15 @@
       ansible.builtin.systemd:
         name: gcsfuse
         state: started
-        daemon_reload: yes
-        enabled: yes
+        daemon_reload: true
+        enabled: true
         scope: user
 
     - name: Download Navidrome
       ansible.builtin.unarchive:
         src: https://github.com/navidrome/navidrome/releases/download/v{{ navidrome_version }}/navidrome_{{ navidrome_version }}_Linux_x86_64.tar.gz
         dest: '{{ home_bin }}'
-        remote_src: yes
+        remote_src: true
         include: navidrome
 
     - name: Template Navidrome service
@@ -172,23 +172,23 @@
       ansible.builtin.systemd:
         name: navidrome
         state: started
-        daemon_reload: yes
-        enabled: yes
+        daemon_reload: true
+        enabled: true
         scope: user
 
     - name: Download Caddy
       ansible.builtin.unarchive:
         src: https://github.com/caddyserver/caddy/releases/download/v{{ caddy_version }}/caddy_{{ caddy_version }}_linux_amd64.tar.gz
         dest: /usr/local/bin
-        remote_src: yes
+        remote_src: true
         include: caddy
-      become: yes
+      become: true
 
     - name: Create certificate dir
       ansible.builtin.file:
         path: '{{ cert_dir }}'
         state: directory
-      become: yes
+      become: true
 
     - name: Copy certificate secrets
       copy:
@@ -198,7 +198,8 @@
         - crt
         - json
         - key
-      become: yes
+      no_log: true
+      become: true
 
     - name: Ensure Caddyfile dir
       file:
@@ -221,13 +222,13 @@
         exec: /usr/local/bin/caddy run --config {{ caddyfile }}
         env:
           - HOME: /caddy
-      become: yes
+      become: true
 
     - name: Start Caddy service
       systemd:
         name: caddy
         state: started
-        daemon_reload: yes
-        enabled: yes
-      become: yes
+        daemon_reload: true
+        enabled: true
+      become: true
 ...
