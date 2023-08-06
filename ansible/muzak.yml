@@ -5,54 +5,9 @@
     - secret.yml
 
   tasks:
-    - name: Wait until DNS is resolving
-      command: host {{ muzak_hoster }}
-      register: muzak_ip
-      retries: 30
-      delay: 10
-      until: muzak_ip.rc == 0
-
-    - name: Remove existing known host(s)
-      known_hosts:
-        name: '{{ muzak_hoster }}'
-        state: absent
-
-    - name: Purge host keys of IPs from previous instances
-      lineinfile:
-        path: '{{ ansible_user_dir }}/.ssh/known_hosts'
-        regexp: '^{{ muzak_ip.stdout.split()[-1] }} .*'
-        state: absent
-
-    - name: Check hashed known hosts for hostname
-      command: ssh-keygen -H -F {{ muzak_hoster }}
-      register: ssh_keygen_hostname
-      failed_when: ssh_keygen_hostname.rc not in [0, 1]
-
-    - name: Purge hashed known hosts of matched hostname
-      lineinfile:
-        path: '{{ ansible_user_dir }}/.ssh/known_hosts'
-        line: '{{ ssh_keygen_hostname.stdout_lines[-1] }}'
-        state: absent
-      when: ssh_keygen_hostname.rc == 0
-
-    - name: Check hashed known hosts for IP
-      command: ssh-keygen -H -F {{ muzak_ip.stdout.split()[-1] }}
-      register: ssh_keygen_ip
-      failed_when: ssh_keygen_ip.rc not in [0, 1]
-
-    - name: Purge hashed known hosts of matched IP
-      lineinfile:
-        path: '{{ ansible_user_dir }}/.ssh/known_hosts'
-        line: '{{ ssh_keygen_ip.stdout_lines[-1] }}'
-        state: absent
-      when: ssh_keygen_ip.rc == 0
-
-    - name: Pause for 10 seconds
-      pause:
-        seconds: 10
-
-    - name: Add keys for host
-      shell: ssh-keyscan {{ muzak_hoster }} | grep ecdsa-sha2-nistp256 >> '{{ ansible_user_dir }}/.ssh/known_hosts'
+    - name: Ensure SSH-ability
+      command:
+        cmd: pressh {{ muzak_hoster }}
 
 - hosts: muzak
 
