@@ -10,9 +10,12 @@ provider "google" {
 
 module "instance-module" {
   source          = "femnad/instance-module/gcp"
-  version         = "0.18.1"
+  version         = "0.20.0"
   github_user     = "femnad"
   image           = "ubuntu-os-cloud/ubuntu-2204-lts"
+  name            = "muzak-instance"
+  network_name    = "muzak-network"
+  subnetwork_name = "muzak-subnetwork"
   service_account = var.service_account
   providers = {
     google = google
@@ -21,7 +24,7 @@ module "instance-module" {
 
 module "dns-module" {
   source           = "femnad/dns-module/gcp"
-  version          = "0.6.1"
+  version          = "0.8.0"
   dns_name         = var.dns_name
   instance_ip_addr = module.instance-module.instance_ip_addr
   managed_zone     = var.managed_zone
@@ -31,9 +34,10 @@ module "dns-module" {
 }
 
 module "firewall-module" {
-  version = "0.7.1"
+  version = "0.10.1"
   source  = "femnad/firewall-module/gcp"
   network = module.instance-module.network_name
+  prefix  = "muzak"
   self_reachable = {
     "443" = "tcp"
     "22"  = "tcp"

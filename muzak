@@ -68,6 +68,8 @@ def up():
     managed_connection = is_managed_connection()
     ansible_dir = os.path.join(root_dir, 'ansible')
     terraform_dir = os.path.join(root_dir, 'terraform')
+
+    sh_input('just init', cwd=terraform_dir)
     sh_input(f'terraform apply -auto-approve -var managed_connection={str(managed_connection).lower()}',
              cwd=terraform_dir)
     ansible_playbook('muzak.yml', root_dir=ansible_dir)
