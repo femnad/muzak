@@ -50,6 +50,7 @@ def is_managed_connection() -> bool:
 
 
 def ansible_playbook(playbook: str, root_dir: Optional[str] = None) -> None:
+    del os.environ['ANSIBLE_CONFIG']
     sh_input(f'ansible-playbook {playbook}', cwd=root_dir)
 
 
