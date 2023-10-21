@@ -1,0 +1,11 @@
+FROM deluan/navidrome:0.49.3
+
+RUN apk add --update --no-cache ca-certificates fuse shadow
+
+ARG HOME=/var/home/core
+RUN mkdir -p ${HOME}/muzak/navidrome
+RUN mkdir -p ${HOME}/muzak/music
+RUN useradd core -d ${HOME}
+RUN chown -R core:core ${HOME}
+USER core
+workdir ${HOME}

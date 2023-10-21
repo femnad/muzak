@@ -49,11 +49,6 @@ def is_managed_connection() -> bool:
     return managed_ssid == active_ssids[0]
 
 
-def ansible_playbook(playbook: str, root_dir: Optional[str] = None) -> None:
-    del os.environ['ANSIBLE_CONFIG']
-    sh_input(f'ansible-playbook {playbook}', cwd=root_dir)
-
-
 def down():
     root_dir = get_root_dir()
     terraform_dir = os.path.join(root_dir, 'terraform')
@@ -67,13 +62,11 @@ def up():
     root_dir = get_root_dir()
 
     managed_connection = is_managed_connection()
-    ansible_dir = os.path.join(root_dir, 'ansible')
     terraform_dir = os.path.join(root_dir, 'terraform')
 
     sh_input('just init', cwd=terraform_dir)
     sh_input(f'terraform apply -auto-approve -var managed_connection={str(managed_connection).lower()}',
              cwd=terraform_dir)
-    ansible_playbook('muzak.yml', root_dir=ansible_dir)
 
 
 def main():

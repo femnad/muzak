@@ -1,21 +1,35 @@
-variable "project" {}
+variable "base_mount_point" {
+  default = "/var/home/core/muzak"
+}
 
-variable "ssh_user" {}
+variable "music_mount_point" {
+  default = "/var/home/core/muzak/music"
+}
 
-variable "managed_zone" {}
+variable "navidrome_mount_point" {
+  default = "/var/home/core/muzak/navidrome"
+}
 
-variable "managed_connection" {}
+variable "gcsfuse_tag" {
+  default = "0.1.9"
+}
 
-variable "dns_name" {}
+variable "navidrome_tag" {
+  default = "0.1.1"
+}
+
+variable "ignition_file" {
+  default = "muzak.ign"
+}
+
+variable "managed_connection" {
+  default = true
+}
 
 variable "region" {
   default = "europe-west2"
 }
 
-variable "volume_name" {}
-
 variable "zone" {
   default = "europe-west2-b"
 }
-
-variable "service_account" {}
