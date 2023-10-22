@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 import argparse
+import datetime
 import os
 import shlex
 import socket
 import subprocess
 import sys
-import time
+from subprocess import PIPE, Popen
 from typing import Optional
+
+# Seconds
+CERT_EXPIRY_TOLERANCE = 60 * 60 * 24 * 7
 
 
 def sh(cmdstr: str, cwd: Optional[str] = None) -> str:
@@ -63,9 +67,28 @@ def down():
              cwd=terraform_dir)
 
 
-def ansible_playbook(playbook: str, root_dir: Optional[str] = None) -> None:
-    del os.environ['ANSIBLE_CONFIG']
-    sh_input(f'ansible-playbook {playbook}', cwd=root_dir)
+def ansible_playbook(playbook_args: str, root_dir: Optional[str] = None) -> None:
+    if 'ANSIBLE_CONFIG' in os.environ:
+        del os.environ['ANSIBLE_CONFIG']
+    sh_input(f'ansible-playbook {playbook_args}', cwd=root_dir)
+
+
+def get_cert_date() -> datetime.datetime:
+    root_dir = get_root_dir()
+    cert = sh(f'sops -d {root_dir}/ansible/certs/cert.crt.sops')
+    openssl = shlex.split('openssl x509 -enddate -noout')
+
+    with Popen(openssl, stdin=PIPE, stdout=PIPE, stderr=PIPE, text=True) as proc:
+        stdout, _ = proc.communicate(input=cert)
+        date = stdout.strip().split('=')[-1]
+        return datetime.datetime.strptime(date, '%b %d %H:%M:%S %Y %Z')
+
+
+def cert_expiry_safe() -> bool:
+    cert_expires_on = get_cert_date()
+    now = datetime.datetime.now()
+    expires_in = cert_expires_on - now
+    return expires_in.total_seconds() > CERT_EXPIRY_TOLERANCE
 
 
 def up():
@@ -73,20 +96,26 @@ def up():
     root_dir = get_root_dir()
 
     managed_connection = str(is_managed_connection()).lower()
+    is_cert_expiry_safe = cert_expiry_safe()
+    saved_cert_valid = str(is_cert_expiry_safe).lower()
+    allow_https_access = str(not is_cert_expiry_safe).lower()
 
     terraform_dir = os.path.join(root_dir, 'terraform')
     sh_input('just init', cwd=terraform_dir)
     sh_input((f'terraform apply -auto-approve '
               f'-var managed_connection={managed_connection} '
-              f'-var needs_cert=true'),
+              f'-var allow_https_access={allow_https_access}'),
              cwd=terraform_dir)
 
     ansible_dir = os.path.join(root_dir, 'ansible')
-    ansible_playbook('muzak.yml', root_dir=ansible_dir)
+    ansible_playbook(f'muzak.yml -e saved_cert_valid={saved_cert_valid}', root_dir=ansible_dir)
+
+    if not allow_https_access:
+        return
 
     sh_input((f'terraform apply -auto-approve '
               f'-var managed_connection={managed_connection} '
-              f'-var needs_cert=false'),
+              f'-var allow_https_access=false'),
              cwd=terraform_dir)
 
 

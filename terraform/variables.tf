@@ -2,8 +2,8 @@ variable "managed_connection" {
   default = true
 }
 
-variable "needs_cert" {
-  default     = false
+variable "allow_https_access" {
+  default     = true
   description = "Allow HTTPS access to the instance for certificate initialization"
   type        = bool
 }

@@ -66,11 +66,10 @@ module "firewall" {
     "443" = "tcp"
     "22"  = "tcp"
   }
-  world_reachable = !var.needs_cert ? null : {
-    port_map = {
+  world_reachable = var.allow_https_access ? { port_map = {
       "443" = "tcp"
     }
-  }
+  } : null
 
   providers = {
     google = google
