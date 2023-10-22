@@ -16,7 +16,7 @@ storage:
   files:
     - path: /etc/Caddy/Caddyfile
       contents:
-        inline:
+        inline: |
           {
               email ${email }
           }
