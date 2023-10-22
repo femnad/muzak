@@ -32,7 +32,7 @@
     - name: Install packages
       ansible.builtin.apt:
         name:
-          - fuse
+          - fuse3
           - unattended-upgrades
 
     - name: Install gcsfuse
@@ -128,6 +128,12 @@
         env:
           - HOME: /caddy
 
+    - name: Ensure cert directory (staging)
+      ansible.builtin.file:
+        path: /caddy/.local/share/caddy/certificates/acme-staging-v02.api.letsencrypt.org-directory/{{ muzak_hoster }}/
+        state: directory
+      when: saved_cert_valid
+
     - name: Read cert files
       ansible.builtin.slurp:
         path: certs/cert.{{ item }}.sops
@@ -136,15 +142,9 @@
       loop: '{{ cert_files }}'
       become: false
 
-    - name: Ensure cert directory (staging)
-      ansible.builtin.file:
-        path: /caddy/.local/share/caddy/certificates/acme-staging-v02.api.letsencrypt.org-directory/{{ muzak_hoster }}/
-        state: directory
-      when: saved_cert_valid
-
     - name: Upload cert files (staging)
       ansible.builtin.copy:
-        content: '{{ item.content | b64decode | community.sops.decrypt }}'
+        content: '{{ item.content | b64decode | community.sops.decrypt(output_type="binary", rstrip=false) }}'
         dest: /caddy/.local/share/caddy/certificates/acme-staging-v02.api.letsencrypt.org-directory/{{ muzak_hoster }}/{{ muzak_hoster }}.{{ item.item }}
       loop: '{{ certs.results }}'
       when: saved_cert_valid
@@ -193,7 +193,7 @@
       community.sops.sops_encrypt:
         age: '{{ age_public_key }}'
         path: certs/cert.{{ item }}.sops
-        content_text: "{{ lookup('ansible.builtin.file', 'certs/cert.{{ item }}') }}"
+        content_text: "{{ lookup('ansible.builtin.file', 'certs/cert.{{ item }}', rstrip=false) }}"
       loop: '{{ cert_files }}'
       when: not saved_cert_valid
 
