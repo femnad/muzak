@@ -12,11 +12,6 @@
 - hosts: muzak
   become: true
 
-  handlers:
-    - name: caddy-pause
-      ansible.builtin.pause:
-        seconds: 20
-
   vars:
     caddy_version: 2.7.5
     caddyfile: /etc/caddy/Caddyfile
@@ -120,5 +115,42 @@
         state: started
         daemon_reload: true
         enabled: true
-      notify: caddy-pause
+
+    - name: Pause 20 seconds for fetching certificates
+      ansible.builtin.pause:
+        seconds: 20
+
+    - name: Fetch certificates (staging)
+      ansible.builtin.fetch:
+        src: /caddy/.local/share/caddy/certificates/acme-staging-v02.api.letsencrypt.org-directory/{{ muzak_hoster }}/{{ muzak_hoster }}.{{ item }}
+        dest: certs/cert.{{ item }}
+        flat: yes
+      loop:
+        - crt
+        - json
+        - key
+
+- hosts: localhost
+  vars:
+    cert_files:
+      - crt
+      - json
+      - key
+
+  vars_files:
+    - secret.yml
+
+  tasks:
+    - name: Encrypt cert files
+      community.sops.sops_encrypt:
+        age: '{{ age_public_key }}'
+        path: certs/cert.{{ item }}.sops
+        content_text: "{{ lookup('ansible.builtin.file', 'certs/cert.{{ item }}') }}"
+      loop: '{{ cert_files }}'
+
+    - name: Delete cert files
+      file:
+        path: certs/cert.{{ item }}
+        state: absent
+      loop: '{{ cert_files }}'
 ...

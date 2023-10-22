@@ -1,7 +1,8 @@
 {
-	email {{ email }}
+    acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+    email {{ email }}
 }
 
 {{ muzak_hoster }} {
-	reverse_proxy 127.0.0.1:4533
+    reverse_proxy 127.0.0.1:4533
 }
