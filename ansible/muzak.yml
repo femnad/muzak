@@ -37,6 +37,14 @@
       ansible.builtin.apt:
         deb: https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v{{ gcsfuse_version }}/gcsfuse_{{ gcsfuse_version }}_amd64.deb
 
+    - name: Update packages
+      ansible.builtin.apt:
+        name: '*'
+        state: latest
+      async: 600
+      poll: 0
+      register: apt_update
+
     - name: Ensure music folder
       ansible.builtin.file:
         path: '{{ music_folder }}'
@@ -120,6 +128,12 @@
       loop: '{{ cert_files }}'
       become: false
 
+    - name: Ensure cert directory
+      ansible.builtin.file:
+        path: /caddy/.local/share/caddy/certificates/acme-staging-v02.api.letsencrypt.org-directory/{{ muzak_hoster }}/
+        state: directory
+      when: saved_cert_valid
+
     - name: Upload cert files (staging)
       ansible.builtin.copy:
         content: '{{ item.content | b64decode | community.sops.decrypt }}'
@@ -147,6 +161,14 @@
         flat: yes
       loop: '{{ cert_files }}'
       when: not saved_cert_valid
+
+    - name: Check apt update status
+      async_status:
+        jid: '{{ apt_update.ansible_job_id }}'
+      register: update_result
+      until: update_result.finished
+      retries: 60
+      delay: 5
 
 - hosts: localhost
   vars:

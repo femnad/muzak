@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import dataclasses
 import datetime
 import os
 import shlex
@@ -11,6 +12,11 @@ from typing import Optional
 
 # Seconds
 CERT_EXPIRY_TOLERANCE = 60 * 60 * 24 * 7
+
+
+@dataclasses.dataclass
+class Args:
+    fetch_certificate: bool = False
 
 
 def sh(cmdstr: str, cwd: Optional[str] = None) -> str:
@@ -59,12 +65,10 @@ def is_managed_connection() -> bool:
     return managed_ssid == active_ssids[0]
 
 
-def down():
+def down(args: Args):
     root_dir = get_root_dir()
     terraform_dir = os.path.join(root_dir, 'terraform')
-    managed_connection = is_managed_connection()
-    sh_input(f'terraform destroy -auto-approve -var managed_connection={str(managed_connection).lower()}',
-             cwd=terraform_dir)
+    sh_input('terraform destroy -auto-approve', cwd=terraform_dir)
 
 
 def ansible_playbook(playbook_args: str, root_dir: Optional[str] = None) -> None:
@@ -91,12 +95,12 @@ def cert_expiry_safe() -> bool:
     return expires_in.total_seconds() > CERT_EXPIRY_TOLERANCE
 
 
-def up():
+def up(args: Args):
     ensure_agent_key()
     root_dir = get_root_dir()
 
     managed_connection = str(is_managed_connection()).lower()
-    is_cert_expiry_safe = cert_expiry_safe()
+    is_cert_expiry_safe = False if args.fetch_certificate else cert_expiry_safe()
     saved_cert_valid = str(is_cert_expiry_safe).lower()
     allow_https_access = str(not is_cert_expiry_safe).lower()
 
@@ -127,15 +131,16 @@ def main():
     down_cmd.set_defaults(func=down)
 
     up_cmd = subparsers.add_parser('up', aliases=['u'])
+    up_cmd.add_argument('-f', '--fetch-certificate', action='store_true')
     up_cmd.set_defaults(func=up)
 
-    args = parser.parse_args()
-
-    if not hasattr(args, 'func'):
+    parsed_args = parser.parse_args()
+    if not hasattr(parsed_args, 'func'):
         parser.print_help()
         return
 
-    args.func()
+    args = Args(**{k: v for k, v in parsed_args.__dict__.items() if k != 'func'})
+    parsed_args.func(args)
 
 
 if __name__ == '__main__':
