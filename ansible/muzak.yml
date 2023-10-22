@@ -29,18 +29,15 @@
     - secret.yml
 
   tasks:
-    - name: Install fuse
+    - name: Install packages
       ansible.builtin.apt:
-        name: fuse
+        name:
+          - fuse
+          - unattended-upgrades
 
     - name: Install gcsfuse
       ansible.builtin.apt:
         deb: https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v{{ gcsfuse_version }}/gcsfuse_{{ gcsfuse_version }}_amd64.deb
-
-    - name: Ensure music folder
-      ansible.builtin.file:
-        path: '{{ music_folder }}'
-        state: directory
 
     - name: Update packages
       ansible.builtin.apt:
@@ -50,6 +47,16 @@
       async: 600
       poll: 0
       register: apt_update
+
+    - name: Enable unattended upgrades
+      ansible.builtin.copy:
+        src: unattended-upgrades.conf
+        dest: /etc/apt/apt.conf.d/50unattended-upgrades
+
+    - name: Ensure music folder
+      ansible.builtin.file:
+        path: '{{ music_folder }}'
+        state: directory
 
     # Allows having the same users across different instances.
     - name: Mount attached disk
