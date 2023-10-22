@@ -32,6 +32,7 @@ module "instance" {
   }]
   github_user     = "femnad"
   image           = data.google_compute_image.debian-latest.self_link
+  machine_type    = "e2-micro"
   name            = "muzak-instance"
   service_account = data.sops_file.secrets.data["service_account"]
 
