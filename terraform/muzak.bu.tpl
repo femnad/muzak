@@ -14,7 +14,7 @@ storage:
       group:
         name: core
   files:
-    - path: /etc/Caddy/Caddyfile
+    - path: ${caddy_dir}/Caddyfile
       contents:
         inline: |
           {
@@ -39,7 +39,8 @@ systemd:
         Wants=network-online.target
 
         [Service]
-        ExecStart=/usr/bin/docker container run -p 443:443 --mount type=bind,source=/etc/caddy,target=/etc/caddy --rm --name caddy caddy:2.7.5-alpine
+        ExecStartPre=/usr/bin/chown -R core:core ${caddy_dir}
+        ExecStart=/usr/bin/docker container run -p 443:443 --privileged --mount type=bind,source=${caddy_dir},target=/etc/caddy --rm --name caddy caddy:2.7.5-alpine
 
         [Install]
         WantedBy=multi-user.target

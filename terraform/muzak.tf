@@ -21,6 +21,7 @@ resource "local_file" "butane" {
   content = templatefile("muzak.bu.tpl", {
     base_mount_point      = var.base_mount_point
     bucket                = data.sops_file.secrets.data["bucket"]
+    caddy_dir             = var.caddy_dir
     email                 = data.sops_file.secrets.data["email"]
     host                  = data.sops_file.secrets.data["host"]
     gcsfuse_image         = local.gcsfuse_image
@@ -151,6 +152,11 @@ module "firewall" {
   self_reachable = {
     "443" = "tcp"
     "22"  = "tcp"
+  }
+  world_reachable = !var.needs_cert ? null : {
+    port_map = {
+      "443" = "tcp"
+    }
   }
 
   providers = {

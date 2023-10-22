@@ -33,3 +33,12 @@ variable "region" {
 variable "zone" {
   default = "europe-west2-b"
 }
+
+variable "needs_cert" {
+  default     = false
+  description = "Caddy server needs to initialize a certificate?"
+}
+
+variable "caddy_dir" {
+  default = "/var/home/core/caddy"
+}
