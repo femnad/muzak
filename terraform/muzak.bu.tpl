@@ -67,7 +67,7 @@ systemd:
 
         [Service]
         ExecStartPre=/usr/bin/chown -R core:core ${navidrome_mount_point}
-        ExecStart=/usr/bin/docker container run --privileged --mount type=bind,source=${base_mount_point},target=${base_mount_point},bind-propagation=shared --rm --name navidrome ${navidrome_image} --datafolder ${navidrome_mount_point} --musicfolder ${music_mount_point}
+        ExecStart=/usr/bin/docker container run -p 4533:4533 --privileged --mount type=bind,source=${base_mount_point},target=${base_mount_point},bind-propagation=shared --rm --name navidrome ${navidrome_image} --datafolder ${navidrome_mount_point} --musicfolder ${music_mount_point}
 
         [Install]
         WantedBy=multi-user.target
