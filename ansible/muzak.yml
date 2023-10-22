@@ -37,15 +37,6 @@
       ansible.builtin.apt:
         deb: https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v{{ gcsfuse_version }}/gcsfuse_{{ gcsfuse_version }}_amd64.deb
 
-    - name: Update packages
-      ansible.builtin.apt:
-        name: '*'
-        state: latest
-        update_cache: true
-      async: 600
-      poll: 0
-      register: apt_update
-
     - name: Ensure music folder
       ansible.builtin.file:
         path: '{{ music_folder }}'
@@ -162,14 +153,6 @@
         flat: yes
       loop: '{{ cert_files }}'
       when: not saved_cert_valid
-
-    - name: Check apt update status
-      async_status:
-        jid: '{{ apt_update.ansible_job_id }}'
-      register: update_result
-      until: update_result.finished
-      retries: 60
-      delay: 5
 
 - hosts: localhost
   vars:
