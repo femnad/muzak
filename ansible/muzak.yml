@@ -42,6 +42,15 @@
         path: '{{ music_folder }}'
         state: directory
 
+    - name: Update packages
+      ansible.builtin.apt:
+        name: '*'
+        state: latest
+        update_cache: true
+      async: 600
+      poll: 0
+      register: apt_update
+
     # Allows having the same users across different instances.
     - name: Mount attached disk
       ansible.builtin.mount:
@@ -153,6 +162,14 @@
         flat: yes
       loop: '{{ cert_files }}'
       when: not saved_cert_valid
+
+    - name: Check apt update status
+      async_status:
+        jid: '{{ apt_update.ansible_job_id }}'
+      register: update_result
+      until: update_result.finished
+      retries: 60
+      delay: 5
 
 - hosts: localhost
   vars:

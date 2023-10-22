@@ -16,8 +16,8 @@ provider "google" {
 }
 
 data "google_compute_image" "debian-latest" {
-  project     = "debian-cloud"
-  family      = "debian-12"
+  project     = "ubuntu-os-cloud"
+  family      = "ubuntu-minimal-2204-lts"
   most_recent = true
 }
 
