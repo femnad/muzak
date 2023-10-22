@@ -41,6 +41,7 @@
       ansible.builtin.apt:
         name: '*'
         state: latest
+        update_cache: true
       async: 600
       poll: 0
       register: apt_update
@@ -128,7 +129,7 @@
       loop: '{{ cert_files }}'
       become: false
 
-    - name: Ensure cert directory
+    - name: Ensure cert directory (staging)
       ansible.builtin.file:
         path: /caddy/.local/share/caddy/certificates/acme-staging-v02.api.letsencrypt.org-directory/{{ muzak_hoster }}/
         state: directory
