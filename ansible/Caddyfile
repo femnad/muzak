@@ -4,5 +4,4 @@
 
 {{ muzak_hoster }} {
 	reverse_proxy 127.0.0.1:4533
-	tls {{ cert_dir }}/{{ muzak_hoster }}.crt {{ cert_dir }}/{{ muzak_hoster }}.key
 }

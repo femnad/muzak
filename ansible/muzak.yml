@@ -10,126 +10,82 @@
         cmd: pressh {{ muzak_hoster }}
 
 - hosts: muzak
+  become: true
+
+  handlers:
+    - name: caddy-pause
+      ansible.builtin.pause:
+        seconds: 20
 
   vars:
-    home: '{{ ansible_env.HOME }}'
-    home_bin: '{{ home }}/bin'
-    caddy_version: 2.6.4
+    caddy_version: 2.7.5
     caddyfile: /etc/caddy/Caddyfile
     data_folder: /mnt/navidrome
-    navidrome_version: 0.49.3
-    user_services_dir: '{{ home }}/.config/systemd/user'
-    mount_point: '{{ home }}/music'
-    cert_dir: '/caddy/certificates/acme.zerossl.com-v2-dv90/{{ muzak_hoster }}'
     gcsfuse_version: 1.2.0
+    music_folder: /mnt/music
+    navidrome_version: 0.49.3
+    services_dir: /etc/systemd/system
 
   vars_files:
     - secret.yml
 
-  handlers:
-    - name: reboot-system
-      reboot:
-      become: true
-
   tasks:
-    - name: Enable persistent logs for user services
-      ansible.builtin.replace:
-        path: /etc/systemd/journald.conf
-        regexp: '#Storage=(auto|volatile)'
-        replace: Storage=persistent
-      become: true
-      notify: reboot-system
-
-    - name: Update packages
-      ansible.builtin.apt:
-        name: '*'
-        state: latest
-        update_cache: true
-      become: true
-
-    - meta: flush_handlers
-
     - name: Install fuse
       ansible.builtin.package:
         name:
           - fuse
-      become: true
-
-    - name: Ensure home binary folder
-      ansible.builtin.file:
-        path: '{{ home_bin }}'
-        state: directory
 
     - name: Install gcsfuse
       ansible.builtin.apt:
         deb: https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v{{ gcsfuse_version }}/gcsfuse_{{ gcsfuse_version }}_amd64.deb
-      become: true
 
-    - name: Ensure Navidrome mount point
+    - name: Ensure music folder
       ansible.builtin.file:
-        path: '{{ mount_point }}'
+        path: '{{ music_folder }}'
         state: directory
 
     # Allows having the same users across different instances.
     - name: Mount attached disk
       ansible.builtin.mount:
         path: /mnt/navidrome
-        src: /dev/sdb1
+        src: /dev/disk/by-id/google-navidrome
         state: mounted
         fstype: ext4
-      become: true
-
-    - name: Ensure navidrome storage has correct ownership
-      ansible.builtin.file:
-        path: /mnt/navidrome
-        owner: '{{ ansible_user_id }}'
-        group: '{{ ansible_user_id }}'
-        recurse: true
-      become: true
-
-    - name: Create user services dir
-      ansible.builtin.file:
-        path: '{{ user_services_dir }}'
-        state: directory
 
     - name: Template gcsfuse service
       ansible.builtin.template:
         src: service.j2
-        dest: '{{ user_services_dir}}/gcsfuse.service'
+        dest: '{{ services_dir }}/gcsfuse.service'
       vars:
         description: A user-space file system for interacting with Google Cloud Storage
-        exec: '/usr/bin/gcsfuse --foreground --implicit-dirs {{ bucket }} {{ mount_point }}'
+        exec: '/usr/bin/gcsfuse --foreground --implicit-dirs {{ bucket }} {{ music_folder }}'
 
     - name: Start gcsfuse service
       ansible.builtin.systemd:
         name: gcsfuse
         state: started
         daemon_reload: true
-        enabled: true
-        scope: user
 
     - name: Download Navidrome
       ansible.builtin.unarchive:
         src: https://github.com/navidrome/navidrome/releases/download/v{{ navidrome_version }}/navidrome_{{ navidrome_version }}_Linux_x86_64.tar.gz
-        dest: '{{ home_bin }}'
+        dest: /usr/local/bin
         remote_src: true
         include: navidrome
 
     - name: Template Navidrome service
       ansible.builtin.template:
         src: service.j2
-        dest: '{{ user_services_dir}}/navidrome.service'
+        dest: '{{ services_dir}}/navidrome.service'
       vars:
         description: Modern Music Server and Streamer compatible with Subsonic/Airsonic
-        exec: '{{ home_bin }}/navidrome --datafolder {{ data_folder }}'
+        exec: /usr/local/bin/navidrome --datafolder {{ data_folder }} --musicfolder {{ music_folder }}
 
     - name: Start Navidrome service
       ansible.builtin.systemd:
         name: navidrome
         state: started
         daemon_reload: true
-        enabled: true
-        scope: user
 
     - name: Download Caddy
       ansible.builtin.unarchive:
@@ -137,36 +93,16 @@
         dest: /usr/local/bin
         remote_src: true
         include: caddy
-      become: true
-
-    - name: Create certificate dir
-      ansible.builtin.file:
-        path: '{{ cert_dir }}'
-        state: directory
-      become: true
-
-    - name: Copy certificate secrets
-      copy:
-        src: '{{ item }}.secret'
-        dest: '{{ cert_dir }}/{{ muzak_hoster }}.{{ item.split(".")[0] }}'
-      loop:
-        - crt
-        - json
-        - key
-      no_log: true
-      become: true
 
     - name: Ensure Caddyfile dir
       file:
         path: '{{ caddyfile | dirname }}'
         state: directory
-      become: true
 
     - name: Write Caddyfile
       template:
         src: Caddyfile
         dest: '{{ caddyfile }}'
-      become: true
 
     - name: Template Caddy service
       template:
@@ -177,7 +113,6 @@
         exec: /usr/local/bin/caddy run --config {{ caddyfile }}
         env:
           - HOME: /caddy
-      become: true
 
     - name: Start Caddy service
       systemd:
@@ -185,5 +120,5 @@
         state: started
         daemon_reload: true
         enabled: true
-      become: true
+      notify: caddy-pause
 ...

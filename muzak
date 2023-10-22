@@ -63,6 +63,11 @@ def down():
              cwd=terraform_dir)
 
 
+def ansible_playbook(playbook: str, root_dir: Optional[str] = None) -> None:
+    del os.environ['ANSIBLE_CONFIG']
+    sh_input(f'ansible-playbook {playbook}', cwd=root_dir)
+
+
 def up():
     ensure_agent_key()
     root_dir = get_root_dir()
@@ -76,8 +81,9 @@ def up():
               f'-var needs_cert=true'),
              cwd=terraform_dir)
 
-    # Naive wait
-    time.sleep(20)
+    ansible_dir = os.path.join(root_dir, 'ansible')
+    ansible_playbook('muzak.yml', root_dir=ansible_dir)
+
     sh_input((f'terraform apply -auto-approve '
               f'-var managed_connection={managed_connection} '
               f'-var needs_cert=false'),
