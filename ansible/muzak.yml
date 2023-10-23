@@ -218,6 +218,7 @@
     - name: Check if there's a need for a new commit
       set_fact:
         needs_commit: '{{ git_status.stdout.strip() | length > 0 }}'
+      when: not cert_valid
 
     - name: Git add new cert files
       ansible.builtin.command:
