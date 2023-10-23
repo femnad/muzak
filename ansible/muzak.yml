@@ -23,6 +23,7 @@
     gcsfuse_version: 1.2.0
     music_folder: /mnt/music
     navidrome_version: 0.49.3
+    cert_valid: '{{ saved_cert_valid | default(true) | bool }}'
     services_dir: /etc/systemd/system
 
   vars_files:
@@ -132,7 +133,7 @@
       ansible.builtin.file:
         path: /caddy/.local/share/caddy/certificates/acme-staging-v02.api.letsencrypt.org-directory/{{ muzak_hoster }}/
         state: directory
-      when: saved_cert_valid
+      when: cert_valid
 
     - name: Read cert files
       ansible.builtin.slurp:
@@ -141,13 +142,14 @@
       register: certs
       loop: '{{ cert_files }}'
       become: false
+      when: cert_valid
 
     - name: Upload cert files (staging)
       ansible.builtin.copy:
         content: '{{ item.content | b64decode | community.sops.decrypt(output_type="binary", rstrip=false) }}'
         dest: /caddy/.local/share/caddy/certificates/acme-staging-v02.api.letsencrypt.org-directory/{{ muzak_hoster }}/{{ muzak_hoster }}.{{ item.item }}
       loop: '{{ certs.results }}'
-      when: saved_cert_valid
+      when: cert_valid
       no_log: true
 
     - name: Start Caddy service
@@ -160,7 +162,7 @@
     - name: Pause 20 seconds for fetching certificates
       ansible.builtin.pause:
         seconds: 20
-      when: not saved_cert_valid
+      when: not cert_valid
 
     - name: Fetch certificates (staging)
       ansible.builtin.fetch:
@@ -168,7 +170,7 @@
         dest: certs/cert.{{ item }}
         flat: yes
       loop: '{{ cert_files }}'
-      when: not saved_cert_valid
+      when: not cert_valid
 
     - name: Check apt update status
       async_status:
@@ -184,6 +186,7 @@
       - crt
       - json
       - key
+    cert_valid: '{{ saved_cert_valid | default(true) | bool }}'
 
   vars_files:
     - secret.yml
@@ -195,12 +198,12 @@
         path: certs/cert.{{ item }}.sops
         content_text: "{{ lookup('ansible.builtin.file', 'certs/cert.{{ item }}', rstrip=false) }}"
       loop: '{{ cert_files }}'
-      when: not saved_cert_valid
+      when: not cert_valid
 
     - name: Delete cert files
       file:
         path: certs/cert.{{ item }}
         state: absent
       loop: '{{ cert_files }}'
-      when: not saved_cert_valid
+      when: not cert_valid
 ...
