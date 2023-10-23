@@ -115,7 +115,8 @@ def up(args: Args):
     ansible_playbook(f'muzak.yml -e saved_cert_valid={saved_cert_valid} -e prod_acme_server={args.prod_acme_server}',
                      root_dir=ansible_dir)
 
-    if not allow_https_access:
+    if saved_cert_valid:
+        # HTTPS access wasn't enabled in the first place.
         return
 
     sh_input((f'terraform apply -auto-approve '
