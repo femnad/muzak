@@ -17,6 +17,7 @@ CERT_EXPIRY_TOLERANCE = 60 * 60 * 24 * 7
 @dataclasses.dataclass
 class Args:
     fetch_certificate: bool = False
+    prod_acme_server: bool = False
 
 
 def sh(cmdstr: str, cwd: Optional[str] = None) -> str:
@@ -99,10 +100,9 @@ def up(args: Args):
     ensure_agent_key()
     root_dir = get_root_dir()
 
+    saved_cert_valid = False if args.fetch_certificate else cert_expiry_safe()
+    allow_https_access = str(not saved_cert_valid).lower()
     managed_connection = str(is_managed_connection()).lower()
-    is_cert_expiry_safe = False if args.fetch_certificate else cert_expiry_safe()
-    saved_cert_valid = str(is_cert_expiry_safe).lower()
-    allow_https_access = str(not is_cert_expiry_safe).lower()
 
     terraform_dir = os.path.join(root_dir, 'terraform')
     sh_input('just init', cwd=terraform_dir)
@@ -112,7 +112,8 @@ def up(args: Args):
              cwd=terraform_dir)
 
     ansible_dir = os.path.join(root_dir, 'ansible')
-    ansible_playbook(f'muzak.yml -e saved_cert_valid={saved_cert_valid}', root_dir=ansible_dir)
+    ansible_playbook(f'muzak.yml -e saved_cert_valid={saved_cert_valid} -e prod_acme_server={args.prod_acme_server}',
+                     root_dir=ansible_dir)
 
     if not allow_https_access:
         return
@@ -132,6 +133,7 @@ def main():
 
     up_cmd = subparsers.add_parser('up', aliases=['u'])
     up_cmd.add_argument('-f', '--fetch-certificate', action='store_true')
+    up_cmd.add_argument('-p', '--prod-acme-server', action='store_true')
     up_cmd.set_defaults(func=up)
 
     parsed_args = parser.parse_args()

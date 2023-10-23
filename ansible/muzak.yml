@@ -19,6 +19,8 @@
       - crt
       - json
       - key
+    maybe_staging: '{{ use_staging | default(true) | bool | ternary("-staging", "") }}'
+    cert_path: /caddy/.local/share/caddy/certificates/acme{{ maybe_staging}}-v02.api.letsencrypt.org-directory/{{ muzak_hoster }}
     data_folder: /mnt/navidrome
     gcsfuse_version: 1.2.0
     music_folder: /mnt/music
@@ -131,7 +133,7 @@
 
     - name: Ensure cert directory (staging)
       ansible.builtin.file:
-        path: /caddy/.local/share/caddy/certificates/acme-staging-v02.api.letsencrypt.org-directory/{{ muzak_hoster }}/
+        path: '{{ cert_path }}'
         state: directory
       when: cert_valid
 
@@ -147,7 +149,7 @@
     - name: Upload cert files (staging)
       ansible.builtin.copy:
         content: '{{ item.content | b64decode | community.sops.decrypt(output_type="binary", rstrip=false) }}'
-        dest: /caddy/.local/share/caddy/certificates/acme-staging-v02.api.letsencrypt.org-directory/{{ muzak_hoster }}/{{ muzak_hoster }}.{{ item.item }}
+        dest: '{{ cert_path }}/{{ muzak_hoster }}.{{ item.item }}'
       loop: '{{ certs.results }}'
       when: cert_valid
       no_log: true
@@ -166,7 +168,7 @@
 
     - name: Fetch certificates (staging)
       ansible.builtin.fetch:
-        src: /caddy/.local/share/caddy/certificates/acme-staging-v02.api.letsencrypt.org-directory/{{ muzak_hoster }}/{{ muzak_hoster }}.{{ item }}
+        src: '{{ cert_path }}/{{ muzak_hoster }}.{{ item }}'
         dest: certs/cert.{{ item }}
         flat: yes
       loop: '{{ cert_files }}'
