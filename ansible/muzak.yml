@@ -209,30 +209,40 @@
       loop: '{{ cert_files }}'
       when: not cert_valid
 
+    - name: Check for cert changes
+      ansible.builtin.command:
+        cmd: git status -s
+      register: git_status
+      when: not cert_valid
+
+    - name: Check if there's a need for a new commit
+      set_fact:
+        needs_commit: '{{ git_status.stdout.strip() | length > 0 }}'
+
     - name: Git add new cert files
       ansible.builtin.command:
         cmd: git add certs/cert.{{ item }}.sops
       with_items: '{{ cert_files }}'
-      when: not cert_valid
+      when: not cert_valid and needs_commit
 
     - name: Commit new cert files
       ansible.builtin.command:
-        cmd: git commit -m 'Add new certs'
-      when: not cert_valid
+        cmd: git commit -m 'add new certs'
+      when: not cert_valid and needs_commit
 
     - name: Show changes
       ansible.builtin.shell: |
         git diff --shortstat HEAD~1..HEAD
         git diff --name-only HEAD~1..HEAD
-      when: not cert_valid
+      when: not cert_valid and needs_commit
 
     - pause:
         prompt: ^ Looks good?
         seconds: 30
-      when: not cert_valid
+      when: not cert_valid and needs_commit
 
     - name: Push commit cert files
       ansible.builtin.command:
         cmd: git push
-      when: not cert_valid
+      when: not cert_valid and needs_commit
 ...
