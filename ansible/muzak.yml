@@ -208,4 +208,15 @@
         state: absent
       loop: '{{ cert_files }}'
       when: not cert_valid
+
+    - name: Git add new cert files
+      command:
+        cmd: git add certs/cert.{{ item }}.sops
+      with_items: '{{ cert_files }}'
+      when: not cert_valid
+
+    - name: Commit new cert files
+      command:
+        cmd: git commit -m 'Add new certs'
+      when: not cert_valid
 ...
