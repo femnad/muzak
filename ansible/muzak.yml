@@ -203,20 +203,36 @@
       when: not cert_valid
 
     - name: Delete cert files
-      file:
+      ansible.builtin.file:
         path: certs/cert.{{ item }}
         state: absent
       loop: '{{ cert_files }}'
       when: not cert_valid
 
     - name: Git add new cert files
-      command:
+      ansible.builtin.command:
         cmd: git add certs/cert.{{ item }}.sops
       with_items: '{{ cert_files }}'
       when: not cert_valid
 
     - name: Commit new cert files
-      command:
+      ansible.builtin.command:
         cmd: git commit -m 'Add new certs'
+      when: not cert_valid
+
+    - name: Show changes
+      ansible.builtin.shell: |
+        git diff --shortstat HEAD~1..HEAD
+        git diff --name-only HEAD~1..HEAD
+      when: not cert_valid
+
+    - pause:
+        prompt: ^ Looks good?
+        seconds: 30
+      when: not cert_valid
+
+    - name: Push commit cert files
+      ansible.builtin.command:
+        cmd: git push
       when: not cert_valid
 ...
