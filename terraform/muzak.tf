@@ -1,7 +1,7 @@
 terraform {
   backend "gcs" {
     bucket = "tf-fcd-sync"
-    prefix = "terraform/muzak"
+    prefix = "muzak"
   }
 }
 
