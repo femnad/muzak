@@ -182,6 +182,15 @@
       retries: 60
       delay: 5
 
+    - name: Check if restart is required
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+
+    - name: Reboot
+      ansible.builtin.reboot:
+      when: reboot_required.stat.exists
+
 - hosts: localhost
   vars:
     cert_files:
