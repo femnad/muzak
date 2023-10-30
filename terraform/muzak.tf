@@ -23,7 +23,7 @@ data "google_compute_image" "debian-latest" {
 
 module "instance" {
   source  = "femnad/instance-module/gcp"
-  version = "0.23.2"
+  version = "0.23.3"
 
   attached_disks = [
     {
@@ -55,19 +55,19 @@ module "dns" {
 }
 
 module "firewall" {
-  version = "0.11.0"
   source  = "femnad/firewall-module/gcp"
+  version = "0.11.0"
 
-  network = module.instance.network_name
   ip_mask = var.managed_connection ? 29 : 32
   ip_num  = var.managed_connection ? 7 : 1
+  network = module.instance.network_name
   prefix  = "muzak"
   self_reachable = {
     "443" = "tcp"
     "22"  = "tcp"
   }
   world_reachable = var.allow_https_access ? { port_map = {
-      "443" = "tcp"
+    "443" = "tcp"
     }
   } : null
 
