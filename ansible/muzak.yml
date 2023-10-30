@@ -131,7 +131,7 @@
         env:
           - HOME: /caddy
 
-    - name: Ensure cert directory (staging)
+    - name: Ensure cert directory
       ansible.builtin.file:
         path: '{{ cert_path }}'
         state: directory
@@ -146,7 +146,7 @@
       become: false
       when: cert_valid
 
-    - name: Upload cert files (staging)
+    - name: Upload cert files
       ansible.builtin.copy:
         content: '{{ item.content | b64decode | community.sops.decrypt(output_type="binary", rstrip=false) }}'
         dest: '{{ cert_path }}/{{ muzak_hoster }}.{{ item.item }}'
@@ -166,7 +166,7 @@
         seconds: 20
       when: not cert_valid
 
-    - name: Fetch certificates (staging)
+    - name: Fetch certificates
       ansible.builtin.fetch:
         src: '{{ cert_path }}/{{ muzak_hoster }}.{{ item }}'
         dest: certs/cert.{{ item }}
