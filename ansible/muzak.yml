@@ -231,17 +231,6 @@
         cmd: git commit -m 'add new certs'
       when: not cert_valid and needs_commit
 
-    - name: Show changes
-      ansible.builtin.shell: |
-        git diff --shortstat HEAD~1..HEAD
-        git diff --name-only HEAD~1..HEAD
-      when: not cert_valid and needs_commit
-
-    - pause:
-        prompt: ^ Looks good?
-        seconds: 30
-      when: not cert_valid and needs_commit
-
     - name: Push commit cert files
       ansible.builtin.command:
         cmd: git push
