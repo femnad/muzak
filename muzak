@@ -112,7 +112,7 @@ def up(args: Args):
              cwd=terraform_dir)
 
     ansible_dir = os.path.join(root_dir, 'ansible')
-    ansible_playbook(f'muzak.yml -e saved_cert_valid={saved_cert_valid} -e prod_acme_server={args.prod_acme_server}',
+    ansible_playbook(f'muzak.yml -e saved_cert_valid={saved_cert_valid} -e use_staging={not args.prod_acme_server}',
                      root_dir=ansible_dir)
 
     if saved_cert_valid:
