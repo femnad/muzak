@@ -19,7 +19,7 @@
       - crt
       - json
       - key
-    maybe_staging: '{{ use_staging | default(true) | bool | ternary("-staging", "") }}'
+    maybe_staging: '{{ use_staging | default(false) | bool | ternary("-staging", "") }}'
     cert_path: /caddy/.local/share/caddy/certificates/acme{{ maybe_staging}}-v02.api.letsencrypt.org-directory/{{ muzak_hoster }}
     data_folder: /mnt/navidrome
     gcsfuse_version: 1.2.0

@@ -17,7 +17,7 @@ CERT_EXPIRY_TOLERANCE = 60 * 60 * 24 * 7
 @dataclasses.dataclass
 class Args:
     fetch_certificate: bool = False
-    prod_acme_server: bool = False
+    staging_acme_server: bool = False
 
 
 def sh(cmdstr: str, cwd: Optional[str] = None) -> str:
@@ -112,7 +112,7 @@ def up(args: Args):
              cwd=terraform_dir)
 
     ansible_dir = os.path.join(root_dir, 'ansible')
-    ansible_playbook(f'muzak.yml -e saved_cert_valid={saved_cert_valid} -e use_staging={not args.prod_acme_server}',
+    ansible_playbook(f'muzak.yml -e saved_cert_valid={saved_cert_valid} -e use_staging={args.staging_acme_server}',
                      root_dir=ansible_dir)
 
     if saved_cert_valid:
@@ -134,7 +134,7 @@ def main():
 
     up_cmd = subparsers.add_parser('up', aliases=['u'])
     up_cmd.add_argument('-f', '--fetch-certificate', action='store_true')
-    up_cmd.add_argument('-p', '--prod-acme-server', action='store_true')
+    up_cmd.add_argument('-p', '--staging-acme-server', action='store_true')
     up_cmd.set_defaults(func=up)
 
     parsed_args = parser.parse_args()
