@@ -1,17 +1,17 @@
-variable "managed_connection" {
-  default = true
-}
-
 variable "allow_https_access" {
   default     = true
   description = "Allow HTTPS access to the instance for certificate initialization"
   type        = bool
 }
 
+variable "managed_connection" {
+  default = true
+}
+
 variable "region" {
-  default = "europe-west2"
+  default = "us-west4"
 }
 
 variable "zone" {
-  default = "europe-west2-b"
+  default = "us-west4-b"
 }
