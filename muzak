@@ -11,7 +11,7 @@ from subprocess import PIPE, Popen
 from typing import Optional
 
 # Seconds
-CERT_EXPIRY_TOLERANCE = 60 * 60 * 24 * 7
+CERT_EXPIRY_TOLERANCE = 60 * 60 * 24
 
 
 @dataclasses.dataclass
