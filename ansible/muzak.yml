@@ -36,6 +36,7 @@
       ansible.builtin.apt:
         name:
           - fuse3
+          - less
           - unattended-upgrades
 
     - name: Install gcsfuse
