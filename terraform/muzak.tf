@@ -15,15 +15,21 @@ provider "google" {
   zone    = var.zone
 }
 
-data "google_compute_image" "debian-latest" {
+provider "google-beta" {
+  project = data.sops_file.secrets.data["project"]
+  region  = var.region
+  zone    = var.zone
+}
+
+data "google_compute_image" "ubuntu-latest" {
   project     = "ubuntu-os-cloud"
   family      = "ubuntu-minimal-2204-lts"
   most_recent = true
 }
 
 module "instance" {
-  source  = "femnad/instance-module/gcp"
-  version = "0.23.3"
+  source  = "femnad/lazyspot/gcp"
+  version = "0.1.0"
 
   attached_disks = [
     {
@@ -31,13 +37,13 @@ module "instance" {
       name   = "navidrome"
   }]
   github_user     = "femnad"
-  image           = data.google_compute_image.debian-latest.self_link
-  machine_type    = "e2-micro"
-  name            = "muzak-instance"
+  image           = data.google_compute_image.ubuntu-latest.self_link
+  max_run_seconds = 14400 # 4 hours
+  name            = "muzak"
   service_account = data.sops_file.secrets.data["service_account"]
 
   providers = {
-    google = google
+    google-beta = google-beta
   }
 }
 

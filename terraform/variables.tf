@@ -6,15 +6,15 @@ variable "allow_https_access" {
 
 variable "managed_connection" {
   default = true
-  type = bool
+  type    = bool
 }
 
 variable "region" {
   default = "us-west4"
-  type = string
+  type    = string
 }
 
 variable "zone" {
   default = "us-west4-b"
-  type = string
+  type    = string
 }
