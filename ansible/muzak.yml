@@ -65,6 +65,20 @@
       poll: 0
       register: apt_update
 
+    - name: Download Caddy
+      ansible.builtin.unarchive:
+        src: https://github.com/caddyserver/caddy/releases/download/v{{ caddy_version }}/caddy_{{ caddy_version }}_linux_amd64.tar.gz
+        dest: /usr/local/bin
+        remote_src: true
+        include: caddy
+
+    - name: Download Navidrome
+      ansible.builtin.unarchive:
+        src: https://github.com/navidrome/navidrome/releases/download/v{{ navidrome_version }}/navidrome_{{ navidrome_version }}_Linux_x86_64.tar.gz
+        dest: /usr/local/bin
+        remote_src: true
+        include: navidrome
+
     - name: Enable unattended upgrades
       ansible.builtin.copy:
         src: unattended-upgrades.conf
@@ -101,57 +115,6 @@
         group: '{{ nonroot_user }}'
         recurse: true
 
-    - name: Template gcsfuse service
-      ansible.builtin.template:
-        src: service.j2
-        dest: '{{ services_dir }}/gcsfuse.service'
-      vars:
-        description: A user-space file system for interacting with Google Cloud Storage
-        exec: '/usr/bin/gcsfuse --foreground --implicit-dirs {{ bucket }} {{ music_folder }}'
-        service_user: '{{ nonroot_user }}'
-
-    - name: Start gcsfuse service
-      ansible.builtin.systemd:
-        name: gcsfuse
-        state: started
-        daemon_reload: true
-
-    - name: Download Navidrome
-      ansible.builtin.unarchive:
-        src: https://github.com/navidrome/navidrome/releases/download/v{{ navidrome_version }}/navidrome_{{ navidrome_version }}_Linux_x86_64.tar.gz
-        dest: /usr/local/bin
-        remote_src: true
-        include: navidrome
-
-    - name: Template Navidrome service
-      ansible.builtin.template:
-        src: service.j2
-        dest: '{{ services_dir}}/navidrome.service'
-      vars:
-        description: Modern Music Server and Streamer compatible with Subsonic/Airsonic
-        exec: /usr/local/bin/navidrome --datafolder {{ data_folder }} --musicfolder {{ music_folder }}
-        service_user: '{{ nonroot_user }}'
-
-    - name: Template Navidrome config
-      ansible.builtin.template:
-        src: navidrome.toml
-        dest: '{{ navidrome_config }}'
-        owner: '{{ nonroot_user }}'
-        group: '{{ nonroot_user }}'
-
-    - name: Start Navidrome service
-      ansible.builtin.systemd:
-        name: navidrome
-        state: started
-        daemon_reload: true
-
-    - name: Download Caddy
-      ansible.builtin.unarchive:
-        src: https://github.com/caddyserver/caddy/releases/download/v{{ caddy_version }}/caddy_{{ caddy_version }}_linux_amd64.tar.gz
-        dest: /usr/local/bin
-        remote_src: true
-        include: caddy
-
     - name: Ensure Caddyfile dir
       file:
         path: '{{ caddyfile | dirname }}'
@@ -161,16 +124,6 @@
       template:
         src: Caddyfile
         dest: '{{ caddyfile }}'
-
-    - name: Template Caddy service
-      template:
-        src: service.j2
-        dest: /etc/systemd/system/caddy.service
-      vars:
-        description: Fast, multi-platform web server with automatic HTTPS
-        exec: /usr/local/bin/caddy run --config {{ caddyfile }}
-        env:
-          - HOME: /caddy
 
     - name: Ensure cert directory
       ansible.builtin.file:
@@ -195,12 +148,48 @@
       when: cert_valid
       no_log: true
 
-    - name: Start Caddy service
+    - name: Template Navidrome config
+      ansible.builtin.template:
+        src: navidrome.toml
+        dest: '{{ navidrome_config }}'
+        owner: '{{ nonroot_user }}'
+        group: '{{ nonroot_user }}'
+
+    - name: Template services
+      template:
+        src: service.j2
+        dest: /etc/systemd/system/{{ item.name }}.service
+      vars:
+        description: '{{ item.description }}'
+        env: '{{ item.env }}'
+        exec: '{{ item.exec }}'
+        name: '{{ item.name }}'
+        service_user: '{{ item.service_user }}'
+      loop:
+        - name: gcsfuse
+          description: A user-space file system for interacting with Google Cloud Storage
+          exec: '/usr/bin/gcsfuse --foreground --implicit-dirs {{ bucket }} {{ music_folder }}'
+          service_user: '{{ nonroot_user }}'
+        - name: navidrome
+          description: Modern Music Server and Streamer compatible with Subsonic/Airsonic
+          exec: /usr/local/bin/navidrome --datafolder {{ data_folder }} --musicfolder {{ music_folder }} --configfile {{ navidrome_config }}
+          service_user: '{{ nonroot_user }}'
+        - name: caddy
+          description: Fast, multi-platform web server with automatic HTTPS
+          exec: /usr/local/bin/caddy run --config {{ caddyfile }}
+          env:
+            - HOME: /caddy
+
+    - name: Start services
       systemd:
-        name: caddy
+        name: '{{ item }}'
         state: started
         daemon_reload: true
         enabled: true
+      loop:
+        - gcsfuse
+        - navidrome
+        - caddy
 
     - name: Pause 20 seconds for fetching certificates
       ansible.builtin.pause:
