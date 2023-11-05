@@ -19,6 +19,9 @@ Environment={{ k }}={{ v }}
 {{ k }}={{ v }}
 {% endfor %}
 {% endif %}
+{% if service_user is defined %}
+User={{ service_user }}
+{% endif %}
 
 [Install]
 WantedBy={{ wanted_by | default('default') }}.target
