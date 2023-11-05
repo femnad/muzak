@@ -73,8 +73,8 @@
     - name: Check if gcsfuse is running
       ansible.builtin.command:
         cmd: systemctl is-active gcsfuse
-      register: navidrome_status
-      failed_when: navidrome_status.rc not in [0, 3]
+      register: gcsfuse_status
+      failed_when: gcsfuse_status.rc not in [0, 3]
 
     - name: Ensure music folder
       ansible.builtin.file:
@@ -84,7 +84,7 @@
         group: '{{ nonroot_user }}'
       # Fails with `There was an issue creating <dir> as requested: [Errno 17] File exists: b''<dir>'''`
       # if gcsfuse is running.
-      when: navidrome_status.rc > 0
+      when: gcsfuse_status.rc > 0
 
     # Allows having the same users across different instances.
     - name: Mount attached disk
