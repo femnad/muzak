@@ -74,7 +74,7 @@
 
     - name: Download Navidrome
       ansible.builtin.unarchive:
-        src: https://github.com/navidrome/navidrome/releases/download/v{{ navidrome_version }}/navidrome_{{ navidrome_version }}_Linux_x86_64.tar.gz
+        src: https://github.com/navidrome/navidrome/releases/download/v{{ navidrome_version }}/navidrome_{{ navidrome_version }}_linux_arm64.tar.gz
         dest: /usr/local/bin
         remote_src: true
         include: navidrome
@@ -88,7 +88,7 @@
       ansible.builtin.command:
         cmd: systemctl is-active gcsfuse
       register: gcsfuse_status
-      failed_when: gcsfuse_status.rc not in [0, 3]
+      failed_when: gcsfuse_status.rc not in [0, 4]
 
     - name: Ensure music folder
       ansible.builtin.file:
@@ -154,6 +154,7 @@
         dest: '{{ navidrome_config }}'
         owner: '{{ nonroot_user }}'
         group: '{{ nonroot_user }}'
+      no_log: true
 
     - name: Template services
       template:
