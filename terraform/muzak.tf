@@ -17,7 +17,7 @@ provider "google" {
 
 module "instance" {
   source  = "femnad/lazyspot/gcp"
-  version = "0.4.0"
+  version = "0.4.1"
 
   disks = [
     {
