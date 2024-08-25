@@ -4,14 +4,17 @@ import dataclasses
 import datetime
 import os
 import shlex
-import socket
 import subprocess
 import sys
 from subprocess import PIPE, Popen
 from typing import Optional
 
+import requests
+
+AS_NUMBER_SECRET = 'meta/managed-connection/as-number'
 # Seconds
 CERT_EXPIRY_TOLERANCE = 60 * 60 * 24 * 7
+IPINFO_URL = 'https//ipinfo.io'
 
 
 @dataclasses.dataclass
@@ -42,9 +45,8 @@ def ensure_agent_key():
     if sh('ssh-add -l'):
         return
 
-    hostname = socket.gethostname()
-    home = os.getenv('HOME')
-    sh_input(f'ssh-add {home}/.ssh/{hostname}')
+    print('Key needs to be added to SSH agent')
+    sys.exit(1)
 
 
 def get_root_dir() -> str:
@@ -52,18 +54,12 @@ def get_root_dir() -> str:
 
 
 def is_managed_connection() -> bool:
-    wireless_networks = [ssid.split(':') for ssid in sh('nmcli --terse -f SSID,ACTIVE device wifi').split('\n')]
-    active_ssids = [ssid[0] for ssid in wireless_networks if ssid[1] == 'yes']
-
-    if not active_ssids:
-        # No good answers here
-        return True
-
-    if len(active_ssids) != 1:
-        raise Exception('Unexpected number of active SSIDs: {len(active_ssids)}')
-
-    managed_ssid = sh('pass meta/managed-connection/ssid')
-    return managed_ssid == active_ssids[0]
+    resp = requests.get(IPINFO_URL)
+    resp.raise_for_status()
+    info = resp.json()
+    as_num = info['org'].split()[0]
+    managed_connection_as_num = sh(f'pass {AS_NUMBER_SECRET}')
+    return managed_connection_as_num == as_num
 
 
 def down(args: Args):
@@ -96,13 +92,17 @@ def cert_expiry_safe() -> bool:
     return expires_in.total_seconds() > CERT_EXPIRY_TOLERANCE
 
 
+def ansible_bool(var: bool) -> str:
+    return str(var).lower()
+
+
 def up(args: Args):
     ensure_agent_key()
     root_dir = get_root_dir()
 
     saved_cert_valid = False if args.fetch_certificate else cert_expiry_safe()
-    allow_https_access = str(not saved_cert_valid).lower()
-    managed_connection = str(is_managed_connection()).lower()
+    allow_https_access = ansible_bool(not saved_cert_valid)
+    managed_connection = ansible_bool(is_managed_connection())
 
     terraform_dir = os.path.join(root_dir, 'terraform')
     sh_input('just init', cwd=terraform_dir)
