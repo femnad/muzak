@@ -17,7 +17,7 @@ provider "google" {
 
 module "instance" {
   source  = "femnad/lazyspot/gcp"
-  version = "0.4.1"
+  version = "0.6.5"
 
   disks = [
     {
@@ -36,7 +36,7 @@ module "instance" {
     } : null
     self = {
       allow = {
-        "tcp"  = ["22", "443"]
+        "tcp" = ["22", "443"]
       }
       ip_mask = var.managed_connection ? 29 : 32
       ip_num  = var.managed_connection ? 7 : 1
@@ -46,8 +46,4 @@ module "instance" {
   max_run_seconds = 14400 # 4 hours
   name            = "muzak"
   service_account = data.sops_file.secrets.data["service_account"]
-
-  providers = {
-    google = google
-  }
 }
