@@ -45,5 +45,7 @@ module "instance" {
   github_user     = "femnad"
   max_run_seconds = 14400 # 4 hours
   name            = "muzak"
-  service_account = data.sops_file.secrets.data["service_account"]
+  service_account = {
+    name = data.sops_file.secrets.data["service_account"]
+  }
 }
