@@ -14,7 +14,7 @@ import requests
 AS_NUMBER_SECRET = 'meta/managed-connection/as-number'
 # Seconds
 CERT_EXPIRY_TOLERANCE = 60 * 60 * 24 * 7
-IPINFO_URL = 'https//ipinfo.io'
+IPINFO_URL = 'https://ipinfo.io'
 
 
 @dataclasses.dataclass
@@ -39,14 +39,6 @@ def sh_input(cmdstr: str, cwd: Optional[str] = None) -> None:
     if code := proc.returncode:
         print(f'{cmdstr} exited with code {code}')
         sys.exit(code)
-
-
-def ensure_agent_key():
-    if sh('ssh-add -l'):
-        return
-
-    print('Key needs to be added to SSH agent')
-    sys.exit(1)
 
 
 def get_root_dir() -> str:
@@ -97,7 +89,6 @@ def ansible_bool(var: bool) -> str:
 
 
 def up(args: Args):
-    ensure_agent_key()
     root_dir = get_root_dir()
 
     saved_cert_valid = False if args.fetch_certificate else cert_expiry_safe()
