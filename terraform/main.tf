@@ -4,11 +4,11 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 5.39.0"
+      version = ">= 7.2.0"
     }
     sops = {
       source  = "carlpett/sops"
-      version = ">= 1.1.0"
+      version = ">= 1.2.1"
     }
   }
 }
